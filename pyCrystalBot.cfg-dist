@@ -1,0 +1,17 @@
+[main]
+nick = pyCrystalBot
+ident = bot
+gecos = pyCrystalBot
+host = irc.crystalirc.net
+port = 6667
+ssl = 0
+join = #crystalirc
+nickserv_pass = changeme
+
+[log]
+path = /var/log/pyCrystalBot.log
+
+[web]
+host = 0.0.0.0
+port = 5000
+

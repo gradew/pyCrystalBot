@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <link rel="shortcut icon" href="bootstrap/docs/assets/ico/favicon.ico">
+
+    <title>pyCrystalBot</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="bootstrap/docs/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap theme -->
+    <link href="bootstrap/docs/dist/css/bootstrap-theme.min.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="css/theme.css" rel="stylesheet">
+
+    <!-- Just for debugging purposes. Don't actually copy this line! -->
+    <!--[if lt IE 9]><script src="bootstrap/docs/assets/js/ie8-responsive-file-warning.js"></script><![endif]-->
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+
+<script src="js/jquery.min.js"></script>
+
+</head>
+
+
+<body role="document">
+
+
+    <!-- Fixed navbar -->
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="/users">pyCrystalBot</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <!--<li><a href="#contact">Contact</a></li>-->
+
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown">Management <b class="caret"></b></a>
+              <ul class="dropdown-menu">
+                <li><a href="#">An action</a></li>
+                <li><a href="#">Something else here</a></li>
+                <li class="divider"></li>
+                <li class="dropdown-header">Nav header</li>
+                <li><a href="#">Separated link</a></li>
+                <li><a href="#">One more separated link</a></li>
+              </ul>
+            </li>
+
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </div>
+    </div> <!-- /container -->
+
+
+<table class="table table-striped" border=1 cellpadding=2 cellspacing=2>
+    <TR>
+        <TH>Key</TH><TH>Nick</TH><TH>Ident</TH><TH>Host</TH><TH>GECOS</TH><TH COLSPAN='2'>Channels</TH>
+    </TR>
+    {% for key, val in users.iteritems() %}
+    <TR>
+            <TD>{{ key }}</TD>
+            <TD>{{ val.nick }}</TD>
+            <TD>{{ val.ident }}</TD>
+            <TD>{{ val.host }}</TD>
+            <TD>{{ val.gecos }}</TD>
+            <TD>
+            {% for ck, cItems in val.channels.iteritems() %}
+                    <span>{{ ck }}</span>
+                    <span style="float: right;">
+                    {% if cItems.voice == 1 %}<span class="label label-success">voice</span>{% endif %}
+                    {% if cItems.halfop == 1 %}<span class="label label-primary">halfop</span>{% endif %}
+                    {% if cItems.op == 1 %}<span class="label label-danger">op</span>{% endif %}
+                    {% if cItems.admin == 1 %}<span class="label label-danger">admin</span>{% endif %}
+                    {% if cItems.owner == 1 %}<span class="label label-danger">owner</span>{% endif %}
+                    </span>
+                    <BR/>
+            {% endfor %}
+            </TD>
+    </TR>
+    {% endfor %}
+</TABLE>
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <script src="bootstrap/docs/dist/js/bootstrap.min.js"></script>
+    <script src="bootstrap/docs/assets/js/docs.min.js"></script>
+  </body>
+</html>
+
