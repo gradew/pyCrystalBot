@@ -9,7 +9,7 @@ join = #crystalirc
 nickserv_pass = changeme
 
 [log]
-path = /var/log/pyCrystalBot.log
+path = /opt/pyCrystalBot/log/pyCrystalBot.log
 
 [web]
 host = 0.0.0.0

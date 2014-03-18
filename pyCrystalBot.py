@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 
 import socket
-import sys, re, datetime, ConfigParser
+import os, sys, re, datetime, ConfigParser
 import threading
 from flask import Flask, render_template, request
 import json
@@ -18,6 +18,11 @@ socketFile = None
 socketWriteLock = threading.Lock()
 
 log_path = None
+execPath = os.path.dirname(__file__)
+
+moduleHash = { }
+
+sys.path.append(execPath + "/modules/")
 
 def sendToSocket(msg):
     socketWriteLock.acquire()
@@ -153,6 +158,23 @@ class pyCrystalBot:
             if data == '':
                 continue
             self.process(data)
+
+    def loadModule(self, name):
+        if name in moduleHash:
+            return False, "Module already loaded"
+        fileName = name
+        try:
+            module = __import__(fileName, fromlist=[])
+        except:
+            return False, "Could not load module!"
+        moduleHash[name] = module.pyCBModule(self)
+        return True, ""
+
+    def unloadModule(self, name):
+        if name not in moduleHash:
+            return False, "Module not loaded"
+        del moduleHash[name]
+        return True, ""
 
     def log(self, msg):
         logging.debug("[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg))
@@ -305,18 +327,24 @@ class pyCrystalBot:
             else:
                 self.log("%s is now known as %s" % (nick, newNick))
             return
+            for modkey in moduleHash:
+                moduleHash[modKey].handleNick(nick, newNick)
         # PART
         match = self.regex_class4_part.match(remainder)
         if match:
             partedChan = match.group(1)
             self.userRemoveChannel(nick, partedChan)
             self.log("%s has left %s" % (nick, partedChan))
+            for modkey in moduleHash:
+                moduleHash[modKey].handlePart(nick, partedChan)
             return
         # QUIT
         match = self.regex_class4_quit.match(remainder)
         if match:
             self.userDelete(nick)
             self.log("%s has quit" % nick)
+            for modkey in moduleHash:
+                moduleHash[modKey].handleQuit(nick)
             return
         # JOIN
         match = self.regex_class4_join.match(remainder)
@@ -324,6 +352,8 @@ class pyCrystalBot:
             joinedChan = match.group(1)
             self.userAddChannel(nick, joinedChan)
             self.log("%s has joined %s" % (nick, joinedChan))
+            for modKey in moduleHash:
+                moduleHash[modKey].handleJoin(nick, joinedChan)
             return
         # NOTICE
         match = self.regex_class4_notice.match(remainder)
@@ -334,18 +364,21 @@ class pyCrystalBot:
                 self.log("%s sent me a notice: %s" % (nick, nMsg))
             else:
                 self.log("%s sent a notice to %s: %s" % (nick, nDest, nMsg))
+            for modKey in moduleHash:
+                moduleHash[modKey].handleNotice(nick, nDest, nMsg)
             return
         # PRIVMSG
         match = self.regex_class4_privmsg.match(remainder)
         if match:
             nDest = match.group(1)
             nMsg = match.group(2)
-            if nMsg == '!debug':
-                self.printDebug()
             if nDest.lower() == self.myNick.lower():
                 self.log("%s sent me a privmsg: %s" % (nick, nMsg))
             else:
                 self.log("%s sent a privmsg to %s: %s" % (nick, nDest, nMsg))
+            # Send event to modules
+            for modKey in moduleHash:
+                moduleHash[modKey].handlePrivmsg(nick, nDest, nMsg)
             return
         # KICK
         match = self.regex_class4_kick.match(remainder)
@@ -358,6 +391,8 @@ class pyCrystalBot:
                 self.log("%s has kicked me out of %s: %s" % (nick, kChan, kReason))
             else:
                 self.log("%s has kicked %s out of %s: %s" % (nick, kVictim, kChan, kReason))
+            for modKey in moduleHash:
+                moduleHash[modKey].handleKick(nick, kChan, kVictim, kReason)
             return
         # MODE
         match = self.regex_class4_mode.match(remainder)
@@ -383,6 +418,8 @@ class pyCrystalBot:
                     #    nickIdx = nickIdx + 1
             else:
                 self.log("%s sets modes %s on %s" % (nick, mFlags, mChan))
+            for modKey in moduleHash:
+                moduleHash[modKey].handleMode(nick, mChan, mModes, mNicks)
             return
         # KILL
         match = self.regex_class4_kill.match(remainder)
@@ -410,13 +447,12 @@ class pyCrystalBot:
             self.send("JOIN %s" % c)
 
 
-    def printDebug(self):
-        for userKey in users:
-            user = users[userKey]
-            print("Key '%s' => %s!%s@%s (gecos=%s), now sitting on %s" % (userKey, user['nick'], user['ident'], user['host'], user['gecos'], user['channels']))
+##########
+## MAIN ##
+##########
 
 config = ConfigParser.RawConfigParser()
-config.read('pyCrystalBot.cfg')
+config.read(execPath + '/pyCrystalBot.cfg')
 nick = config.get('main', 'nick')
 ident = config.get('main', 'ident')
 gecos = config.get('main', 'gecos')
@@ -435,7 +471,8 @@ web_port = config.getint('web', 'port')
 web=pyCrystalWebServer(web_host, web_port)
 bot=pyCrystalBot(nick, ident, gecos, host, port, ssl, join, nickserv_pass)
 
+bot.loadModule('mod01')
+
 web.start()
 bot.run()
-
 
