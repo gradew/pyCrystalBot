@@ -180,7 +180,6 @@ class pyCrystalBot:
             return False, "Module already loaded"
         fileName = name
         try:
-            #module = __import__(fileName, fromlist=[])
             module = __import__(fileName)
         except:
             return False, "Could not load module!"
@@ -229,6 +228,71 @@ class pyCrystalBot:
             users[lNewNick] = userData
             users[lNewNick]['nick'] = newNick
         usersLock.release()
+
+    def userIsVoice(self, nick, channel):
+        res = False
+        lNick = nick.lower()
+        lChannel = channel.lower()
+        if lNick in users:
+            channels = users[lNick]['channels']
+            if lChannel in channels:
+                if channels[lChannel]['voice'] == 1:
+                    res = True
+        usersLock.acquire()
+        usersLock.release()
+        return res
+
+    def userIsHalfop(self, nick, channel):
+        res = False
+        lNick = nick.lower()
+        lChannel = channel.lower()
+        if lNick in users:
+            channels = users[lNick]['channels']
+            if lChannel in channels:
+                if channels[lChannel]['halfop'] == 1:
+                    res = True
+        usersLock.acquire()
+        usersLock.release()
+        return res
+
+    def userIsOp(self, nick, channel):
+        res = False
+        lNick = nick.lower()
+        lChannel = channel.lower()
+        if lNick in users:
+            channels = users[lNick]['channels']
+            if lChannel in channels:
+                if channels[lChannel]['op'] == 1:
+                    res = True
+        usersLock.acquire()
+        usersLock.release()
+        return res
+
+    def userIsAdmin(self, nick, channel):
+        res = False
+        lNick = nick.lower()
+        lChannel = channel.lower()
+        if lNick in users:
+            channels = users[lNick]['channels']
+            if lChannel in channels:
+                if channels[lChannel]['admin'] == 1:
+                    res = True
+        usersLock.acquire()
+        usersLock.release()
+        return res
+
+    def userIsOwner(self, nick, channel):
+        res = False
+        lNick = nick.lower()
+        lChannel = channel.lower()
+        if lNick in users:
+            channels = users[lNick]['channels']
+            if lChannel in channels:
+                if channels[lChannel]['owner'] == 1:
+                    res = True
+        usersLock.acquire()
+        usersLock.release()
+        return res
 
     def userAddChannel(self, nick, channel):
         usersLock.acquire()
@@ -434,8 +498,6 @@ class pyCrystalBot:
                         nickIdx = nickIdx + 1
                     elif c == 'b':
                         nickIdx = nickIdx + 1 # though it's not a nick
-                    #else:
-                    #    nickIdx = nickIdx + 1
             else:
                 self.log("%s sets modes %s on %s" % (nick, mFlags, mChan))
             for modKey in moduleHash:
@@ -490,8 +552,6 @@ web_port = config.getint('web', 'port')
 
 web_instance=pyCrystalWebServer(web_host, web_port)
 bot_instance=pyCrystalBot(nick, ident, gecos, host, port, ssl, join, nickserv_pass)
-
-#bot_instance.loadModule('mod01')
 
 web_instance.start()
 bot_instance.run()
