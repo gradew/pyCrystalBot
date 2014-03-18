@@ -7,7 +7,6 @@ class pyCBModule:
     parentClass = None
     def __init__(self, parentClass_):
         self.parentClass = parentClass_
-        self.parentClass.log("Module mod01 loaded!")
 
     def handleNick(self, oldNick, newNick):
         pass

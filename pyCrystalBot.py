@@ -21,6 +21,8 @@ log_path = None
 execPath = os.path.dirname(__file__)
 
 moduleHash = { }
+web_instance = None
+bot_instance = None
 
 sys.path.append(execPath + "/modules/")
 
@@ -62,6 +64,20 @@ class pyCrystalWebServer:
         usersLock.release()
         return render_template("userdump.html", users=res)
         #return json.dumps(res)
+
+    @app.route('/modload', methods=['POST'])
+    def modLoad():
+        mName = request.form['name']
+        if re.match('^[a-zA-Z0-9\-_\.]+$', mName):
+            bot_instance.loadModule(mName)
+        return ""
+
+    @app.route('/modunload', methods=['POST'])
+    def modUnload():
+        mName = request.form['name']
+        if re.match('^[a-zA-Z0-9\-_\.]+$', mName):
+            bot_instance.unloadModule(mName)
+        return ""
 
     @app.route('/say', methods=['POST'])
     def sayTo():
@@ -164,16 +180,20 @@ class pyCrystalBot:
             return False, "Module already loaded"
         fileName = name
         try:
-            module = __import__(fileName, fromlist=[])
+            #module = __import__(fileName, fromlist=[])
+            module = __import__(fileName)
         except:
             return False, "Could not load module!"
         moduleHash[name] = module.pyCBModule(self)
+        self.log("Loaded module %s" % name)
         return True, ""
 
     def unloadModule(self, name):
         if name not in moduleHash:
             return False, "Module not loaded"
+        sys.modules.pop(name)
         del moduleHash[name]
+        self.log("Unloaded module %s" % name)
         return True, ""
 
     def log(self, msg):
@@ -468,11 +488,11 @@ logging.basicConfig(filename=log_path, level=logging.DEBUG)
 web_host = config.get('web', 'host')
 web_port = config.getint('web', 'port')
 
-web=pyCrystalWebServer(web_host, web_port)
-bot=pyCrystalBot(nick, ident, gecos, host, port, ssl, join, nickserv_pass)
+web_instance=pyCrystalWebServer(web_host, web_port)
+bot_instance=pyCrystalBot(nick, ident, gecos, host, port, ssl, join, nickserv_pass)
 
-bot.loadModule('mod01')
+#bot_instance.loadModule('mod01')
 
-web.start()
-bot.run()
+web_instance.start()
+bot_instance.run()
 
