@@ -200,23 +200,26 @@ class pyCrystalBot:
 
     def loadModule(self, name):
         if name in moduleHash:
-            return False, "Module already loaded"
+            self.log("Module %s already loaded" % name, LOGLEVEL_ERROR)
+            return False
         fileName = name
         try:
             module = __import__(fileName)
         except:
-            return False, "Could not load module!"
+            self.log("Could not load module %s" % name, LOGLEVEL_ERROR)
+            return False
         moduleHash[name] = module.pyCBModule(self)
         self.log("Loaded module %s" % name)
-        return True, ""
+        return True
 
     def unloadModule(self, name):
         if name not in moduleHash:
-            return False, "Module not loaded"
+            self.log("Module %s was not loaded", LOGLEVEL_ERROR)
+            return False
         sys.modules.pop(name)
         del moduleHash[name]
         self.log("Unloaded module %s" % name)
-        return True, ""
+        return True
 
     def log(self, msg, loglevel=LOGLEVEL_INFO):
         logStr="[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg)
