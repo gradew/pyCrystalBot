@@ -28,6 +28,12 @@ bot_instance = None
 
 sys.path.append(execPath + "/modules/")
 
+LOGLEVEL_CRITICAL = 0
+LOGLEVEL_ERROR = 1
+LOGLEVEL_WARNING = 2
+LOGLEVEL_INFO = 3
+LOGLEVEL_DEBUG = 4
+
 def sendToSocket(msg):
     socketWriteLock.acquire()
     mySocket.send(msg+"\r\n")
@@ -212,8 +218,18 @@ class pyCrystalBot:
         self.log("Unloaded module %s" % name)
         return True, ""
 
-    def log(self, msg):
-        logging.debug("[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg))
+    def log(self, msg, loglevel=LOGLEVEL_INFO):
+        logStr="[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg)
+        if loglevel == LOGLEVEL_CRITICAL:
+            logging.critical(logStr)
+        elif loglevel == LOGLEVEL_ERROR:
+            logging.error(logStr)
+        elif loglevel == LOGLEVEL_WARNING:
+            logging.warning(logStr)
+        elif loglevel == LOGLEVEL_INFO:
+            logging.info(logStr)
+        elif loglevel == LOGLEVEL_DEBUG:
+            logging.debug(logStr)
 
     def userDelete(self, nick):
         if nick.lower() in users:
@@ -337,7 +353,7 @@ class pyCrystalBot:
         usersLock.release()
 
     def userSetChannelModes(self, nick, chan, modes):
-        self.log("userSetChannelModes(%s, %s, %s)" % (nick, chan, modes))
+        self.log("userSetChannelModes(%s, %s, %s)" % (nick, chan, modes), LOGLEVEL_DEBUG)
         lNick = nick.lower()
         lChan = chan.lower()
         usersLock.acquire()
@@ -378,7 +394,7 @@ class pyCrystalBot:
                 self.connected = True
             return
 
-        self.log("S< %s" % data)
+        self.log("S< %s" % data, LOGLEVEL_DEBUG)
         # Class 3
         match = self.regex_class3.match(data)
         if match:
@@ -548,7 +564,7 @@ class pyCrystalBot:
     def send(self, msg):
         global mySocket
         if not re.match('^PONG :', msg):
-            self.log("S> %s" % msg)
+            self.log("S> %s" % msg, LOGLEVEL_DEBUG)
         sendToSocket(msg+"\r\n")
 
     def say(self, dest, msg):
@@ -576,9 +592,19 @@ port = config.getint('main', 'port')
 ssl = config.getint('main', 'ssl')
 join = config.get('main', 'join')
 nickserv_pass = config.get('main', 'nickserv_pass')
-
 log_path = config.get('log', 'path')
-logging.basicConfig(filename=log_path, level=logging.DEBUG)
+log_level = config.get('log', 'level').lower()
+
+if log_level == 'critical':
+    logging.basicConfig(filename=log_path, level=logging.CRITICAL)
+elif log_level == 'error':
+    logging.basicConfig(filename=log_path, level=logging.ERROR)
+elif log_level == 'warning':
+    logging.basicConfig(filename=log_path, level=logging.WARNING)
+elif log_level == 'debug':
+    logging.basicConfig(filename=log_path, level=logging.DEBUG)
+else:
+    logging.basicConfig(filename=log_path, level=logging.INFO)
 
 web_host = config.get('web', 'host')
 web_port = config.getint('web', 'port')
