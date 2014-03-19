@@ -32,3 +32,5 @@ class pyCBModule:
     def handleMode(self, nick, chan, modes, targets):
         pass
 
+    def handleClock(self):
+        pass

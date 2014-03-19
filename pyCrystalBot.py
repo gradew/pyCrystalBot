@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 
-import socket
+import socket, time
 import os, sys, re, datetime, ConfigParser
 import threading
 from flask import Flask, render_template, request
@@ -21,6 +21,8 @@ log_path = None
 execPath = os.path.dirname(__file__)
 
 moduleHash = { }
+moduleLock = threading.Lock()
+
 web_instance = None
 bot_instance = None
 
@@ -169,11 +171,25 @@ class pyCrystalBot:
         self.send("NICK %s" % self.myNick)
         self.send("USER %(ident)s %(nick)s %(nick)s :%(gecos)s" % {'nick':self.myNick, 'ident':self.myIdent, 'gecos':self.myGecos})
 
+        # Start clock thread
+        tc = threading.Thread(target=self.clockThread)
+        tc.daemon = True
+        tc.setDaemon(True)
+        tc.start()
+
         while True:
             data = socketFile.readline().strip()
             if data == '':
                 continue
             self.process(data)
+
+    def clockThread(self):
+        while True:
+            time.sleep(10)
+            moduleLock.acquire()
+            for modKey in moduleHash:
+                moduleHash[modKey].handleClock()
+            moduleLock.release()
 
     def loadModule(self, name):
         if name in moduleHash:
@@ -220,9 +236,9 @@ class pyCrystalBot:
         usersLock.release()
 
     def userRename(self, oldNick, newNick):
-        usersLock.acquire()
         lOldNick = oldNick.lower()
         lNewNick = newNick.lower()
+        usersLock.acquire()
         if lOldNick in users:
             userData = users[lOldNick]
             users[lNewNick] = userData
@@ -233,12 +249,12 @@ class pyCrystalBot:
         res = False
         lNick = nick.lower()
         lChannel = channel.lower()
+        usersLock.acquire()
         if lNick in users:
             channels = users[lNick]['channels']
             if lChannel in channels:
                 if channels[lChannel]['voice'] == 1:
                     res = True
-        usersLock.acquire()
         usersLock.release()
         return res
 
@@ -246,12 +262,12 @@ class pyCrystalBot:
         res = False
         lNick = nick.lower()
         lChannel = channel.lower()
+        usersLock.acquire()
         if lNick in users:
             channels = users[lNick]['channels']
             if lChannel in channels:
                 if channels[lChannel]['halfop'] == 1:
                     res = True
-        usersLock.acquire()
         usersLock.release()
         return res
 
@@ -259,12 +275,12 @@ class pyCrystalBot:
         res = False
         lNick = nick.lower()
         lChannel = channel.lower()
+        usersLock.acquire()
         if lNick in users:
             channels = users[lNick]['channels']
             if lChannel in channels:
                 if channels[lChannel]['op'] == 1:
                     res = True
-        usersLock.acquire()
         usersLock.release()
         return res
 
@@ -272,12 +288,12 @@ class pyCrystalBot:
         res = False
         lNick = nick.lower()
         lChannel = channel.lower()
+        usersLock.acquire()
         if lNick in users:
             channels = users[lNick]['channels']
             if lChannel in channels:
                 if channels[lChannel]['admin'] == 1:
                     res = True
-        usersLock.acquire()
         usersLock.release()
         return res
 
@@ -285,19 +301,19 @@ class pyCrystalBot:
         res = False
         lNick = nick.lower()
         lChannel = channel.lower()
+        usersLock.acquire()
         if lNick in users:
             channels = users[lNick]['channels']
             if lChannel in channels:
                 if channels[lChannel]['owner'] == 1:
                     res = True
-        usersLock.acquire()
         usersLock.release()
         return res
 
     def userAddChannel(self, nick, channel):
-        usersLock.acquire()
         lNick = nick.lower()
         lChannel = channel.lower()
+        usersLock.acquire()
         if lNick in users:
             channels = users[lNick]['channels']
             if not (lChannel in channels):
@@ -310,9 +326,9 @@ class pyCrystalBot:
         usersLock.release()
 
     def userRemoveChannel(self, nick, channel):
-        usersLock.acquire()
         lNick = nick.lower()
         lChannel = channel.lower()
+        usersLock.acquire()
         if lNick in users:
             channels = users[lNick]['channels']
             if lChannel in channels:
@@ -410,25 +426,31 @@ class pyCrystalBot:
                 self.log("My new nick is %s" % self.myNick)
             else:
                 self.log("%s is now known as %s" % (nick, newNick))
-            return
-            for modkey in moduleHash:
+            moduleLock.acquire()
+            for modKey in moduleHash:
                 moduleHash[modKey].handleNick(nick, newNick)
+            moduleLock.release()
+            return
         # PART
         match = self.regex_class4_part.match(remainder)
         if match:
             partedChan = match.group(1)
             self.userRemoveChannel(nick, partedChan)
             self.log("%s has left %s" % (nick, partedChan))
-            for modkey in moduleHash:
+            moduleLock.acquire()
+            for modKey in moduleHash:
                 moduleHash[modKey].handlePart(nick, partedChan)
+            moduleLock.release()
             return
         # QUIT
         match = self.regex_class4_quit.match(remainder)
         if match:
             self.userDelete(nick)
             self.log("%s has quit" % nick)
-            for modkey in moduleHash:
+            moduleLock.acquire()
+            for modKey in moduleHash:
                 moduleHash[modKey].handleQuit(nick)
+            moduleLock.release()
             return
         # JOIN
         match = self.regex_class4_join.match(remainder)
@@ -436,8 +458,10 @@ class pyCrystalBot:
             joinedChan = match.group(1)
             self.userAddChannel(nick, joinedChan)
             self.log("%s has joined %s" % (nick, joinedChan))
+            moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleJoin(nick, joinedChan)
+            moduleLock.release()
             return
         # NOTICE
         match = self.regex_class4_notice.match(remainder)
@@ -448,8 +472,10 @@ class pyCrystalBot:
                 self.log("%s sent me a notice: %s" % (nick, nMsg))
             else:
                 self.log("%s sent a notice to %s: %s" % (nick, nDest, nMsg))
+            moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleNotice(nick, nDest, nMsg)
+            moduleLock.release()
             return
         # PRIVMSG
         match = self.regex_class4_privmsg.match(remainder)
@@ -461,8 +487,10 @@ class pyCrystalBot:
             else:
                 self.log("%s sent a privmsg to %s: %s" % (nick, nDest, nMsg))
             # Send event to modules
+            moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handlePrivmsg(nick, nDest, nMsg)
+            moduleLock.release()
             return
         # KICK
         match = self.regex_class4_kick.match(remainder)
@@ -475,8 +503,10 @@ class pyCrystalBot:
                 self.log("%s has kicked me out of %s: %s" % (nick, kChan, kReason))
             else:
                 self.log("%s has kicked %s out of %s: %s" % (nick, kVictim, kChan, kReason))
+            moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleKick(nick, kChan, kVictim, kReason)
+            moduleLock.release()
             return
         # MODE
         match = self.regex_class4_mode.match(remainder)
@@ -500,8 +530,10 @@ class pyCrystalBot:
                         nickIdx = nickIdx + 1 # though it's not a nick
             else:
                 self.log("%s sets modes %s on %s" % (nick, mFlags, mChan))
+            moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleMode(nick, mChan, mModes, mNicks)
+            moduleLock.release()
             return
         # KILL
         match = self.regex_class4_kill.match(remainder)
