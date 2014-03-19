@@ -186,7 +186,7 @@ class pyCrystalBot:
     def clockThread(self):
         while True:
             time.sleep(10)
-            stime = time.time()
+            stime = int(time.time())
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleClock(stime)
