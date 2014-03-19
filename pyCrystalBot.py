@@ -186,9 +186,10 @@ class pyCrystalBot:
     def clockThread(self):
         while True:
             time.sleep(10)
+            stime = time.time()
             moduleLock.acquire()
             for modKey in moduleHash:
-                moduleHash[modKey].handleClock()
+                moduleHash[modKey].handleClock(stime)
             moduleLock.release()
 
     def loadModule(self, name):
