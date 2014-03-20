@@ -36,7 +36,7 @@ LOGLEVEL_DEBUG = 4
 
 def sendToSocket(msg):
     socketWriteLock.acquire()
-    mySocket.send(msg+"\r\n")
+    mySocket.send(msg.encode('utf8')+"\r\n")
     socketWriteLock.release()
 
 class pyCrystalWebServer:
@@ -597,6 +597,7 @@ join = config.get('main', 'join')
 nickserv_pass = config.get('main', 'nickserv_pass')
 pid_file = config.get('main', 'pid')
 r_user = config.get('main', 'user')
+modules_str = config.get('main', 'modules')
 log_path = config.get('log', 'path')
 log_level = config.get('log', 'level').lower()
 
@@ -631,17 +632,25 @@ else:
 web_host = config.get('web', 'host')
 web_port = config.getint('web', 'port')
 
+# Instantiate classes
 web_instance=pyCrystalWebServer(web_host, web_port)
 bot_instance=pyCrystalBot(nick, ident, gecos, host, port, ssl, join, nickserv_pass)
 
+# Auto-load modules
+modules_array = modules_str.split(',')
+for module in modules_array:
+        bot_instance.loadModule(module.strip())
+
+# Fork/daemonize process
 newpid = os.fork()
 if newpid == 0:
     os.setuid(r_uid)
     web_instance.start()
     bot_instance.run()
-else:
-    # Write PID
-    fl = open(pid_file, 'w')
-    fl.write(str(newpid))
-    fl.close()
+    sys.exit(0)
+
+# Write PID
+fl = open(pid_file, 'w')
+fl.write(str(newpid))
+fl.close()
 
