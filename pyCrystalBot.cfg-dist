@@ -7,6 +7,8 @@ port = 6667
 ssl = 0
 join = #crystalirc
 nickserv_pass = changeme
+pid = /opt/pyCrystalBot/pyCrystalBot.pid
+user = pycrystalbot
 
 [log]
 path = /opt/pyCrystalBot/log/pyCrystalBot.log

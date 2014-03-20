@@ -1,7 +1,7 @@
 #!/usr/bin/python2
 
 import socket, time
-import os, sys, re, datetime, ConfigParser
+import os, sys, re, datetime, ConfigParser, pwd
 import threading
 from flask import Flask, render_template, request
 import json
@@ -595,8 +595,27 @@ port = config.getint('main', 'port')
 ssl = config.getint('main', 'ssl')
 join = config.get('main', 'join')
 nickserv_pass = config.get('main', 'nickserv_pass')
+pid_file = config.get('main', 'pid')
+r_user = config.get('main', 'user')
 log_path = config.get('log', 'path')
 log_level = config.get('log', 'level').lower()
+
+if os.path.isfile(pid_file):
+    print("PID file exists!")
+    sys.exit(1)
+
+try:
+    fl = open(pid_file, 'w')
+    fl.close()
+except:
+    print("Cannot create PID file!")
+    sys.exit(1)
+
+try:
+    r_uid = pwd.getpwnam(r_user).pw_uid
+except:
+    print("Specified user or group doesn't exist!")
+    sys.exit(1)
 
 if log_level == 'critical':
     logging.basicConfig(filename=log_path, level=logging.CRITICAL)
@@ -615,6 +634,14 @@ web_port = config.getint('web', 'port')
 web_instance=pyCrystalWebServer(web_host, web_port)
 bot_instance=pyCrystalBot(nick, ident, gecos, host, port, ssl, join, nickserv_pass)
 
-web_instance.start()
-bot_instance.run()
+newpid = os.fork()
+if newpid == 0:
+    os.setuid(r_uid)
+    web_instance.start()
+    bot_instance.run()
+else:
+    # Write PID
+    fl = open(pid_file, 'w')
+    fl.write(str(newpid))
+    fl.close()
 
