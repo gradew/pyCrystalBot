@@ -617,6 +617,7 @@ class pyCrystalBot:
 # Signal handler
 
 def catchTerm(signum, stack):
+    bot_instance.log("Received SIGINT - Exiting...")
     bot_instance.stop()
     web_instance.stop()
     time.sleep(1)
