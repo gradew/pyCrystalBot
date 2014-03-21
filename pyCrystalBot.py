@@ -1,6 +1,6 @@
 #!/usr/bin/python2
 
-import socket, time
+import socket, time, signal
 import os, sys, re, datetime, ConfigParser, pwd
 import threading
 from flask import Flask, render_template, request
@@ -42,6 +42,8 @@ def sendToSocket(msg):
 class pyCrystalWebServer:
     bind_host = None
     bind_port = None
+    t1 = None
+    running = False
 
     def __init__(self, host_='0.0.0.0', port_=5000):
         self.bind_host = host_
@@ -49,14 +51,22 @@ class pyCrystalWebServer:
 
     def start(self):
         # Start thread
-        t1 = threading.Thread(target=self.threadWebServer)
-        t1.daemon = True
-        t1.setDaemon(True)
-        t1.start()
+        self.t1 = threading.Thread(target=self.threadWebServer)
+        self.t1.daemon = True
+        self.t1.setDaemon(True)
+        self.t1.start()
+
+    def stop(self):
+        if (self.t1 != None) and (self.running == True):
+            self.t1._Thread__stop()
+            self.t1.join()
+            self.running = False
 
     def threadWebServer(self):
         #self.log("Thread started")
+        self.running = True
         app.run(host=self.bind_host, port=self.bind_port)
+        self.running = False
 
     @app.route("/")
     def getRoot():
@@ -118,6 +128,7 @@ class pyCrystalWebServer:
         return ""
 
 class pyCrystalBot:
+    running = False
     connected = False
     host = ''
     port = ''
@@ -156,6 +167,9 @@ class pyCrystalBot:
 
     regex_prefixed_nick = re.compile('^([\+%@])([^\s]+)$')
 
+    tc1 = None
+    tc2 = None
+
     def __init__(self, _nick, _ident, _gecos, _host, _port, _ssl, _join, _nickserv_pass):
         self.myNick = _nick.strip()
         self.myIdent = _ident.strip()
@@ -170,7 +184,7 @@ class pyCrystalBot:
             self.channels.append(word.strip())
 
     def run(self):
-        global mySocket
+        global mySocket, socketFile
         mySocket = socket.socket()
         mySocket.connect((self.host, self.port))
         socketFile = mySocket.makefile()
@@ -178,11 +192,26 @@ class pyCrystalBot:
         self.send("USER %(ident)s %(nick)s %(nick)s :%(gecos)s" % {'nick':self.myNick, 'ident':self.myIdent, 'gecos':self.myGecos})
 
         # Start clock thread
-        tc = threading.Thread(target=self.clockThread)
-        tc.daemon = True
-        tc.setDaemon(True)
-        tc.start()
+        self.tc1 = threading.Thread(target=self.clockThread)
+        self.tc1.daemon = True
+        self.tc1.setDaemon(True)
+        self.tc1.start()
 
+        # Start reading thread
+        self.tc2 = threading.Thread(target=self.readThread)
+        self.tc2.daemon = True
+        self.tc2.setDaemon(True)
+        self.tc2.start()
+
+    def stop(self):
+        self.running = False
+        self.tc1._Thread__stop()
+        self.tc1.join()
+        self.tc2._Thread__stop()
+        self.tc2.join()
+
+    def readThread(self):
+        global socketFile
         while True:
             data = socketFile.readline().strip()
             if data == '':
@@ -190,13 +219,18 @@ class pyCrystalBot:
             self.process(data)
 
     def clockThread(self):
-        while True:
-            time.sleep(10)
-            stime = int(time.time())
-            moduleLock.acquire()
-            for modKey in moduleHash:
-                moduleHash[modKey].handleClock(stime)
-            moduleLock.release()
+        self.running = True
+        iternum = 0
+        while self.running == True:
+            time.sleep(1)
+            iternum = iternum + 1
+            if iternum == 10:
+                iternum = 0
+                stime = int(time.time())
+                moduleLock.acquire()
+                for modKey in moduleHash:
+                    moduleHash[modKey].handleClock(stime)
+                moduleLock.release()
 
     def loadModule(self, name):
         if name in moduleHash:
@@ -580,7 +614,13 @@ class pyCrystalBot:
         for c in self.channels:
             self.send("JOIN %s" % c)
 
+# Signal handler
 
+def catchTerm(signum, stack):
+    bot_instance.stop()
+    web_instance.stop()
+    time.sleep(1)
+    sys.exit(0)
 ##########
 ## MAIN ##
 ##########
@@ -595,28 +635,9 @@ port = config.getint('main', 'port')
 ssl = config.getint('main', 'ssl')
 join = config.get('main', 'join')
 nickserv_pass = config.get('main', 'nickserv_pass')
-pid_file = config.get('main', 'pid')
-r_user = config.get('main', 'user')
 modules_str = config.get('main', 'modules')
 log_path = config.get('log', 'path')
 log_level = config.get('log', 'level').lower()
-
-if os.path.isfile(pid_file):
-    print("PID file exists!")
-    sys.exit(1)
-
-try:
-    fl = open(pid_file, 'w')
-    fl.close()
-except:
-    print("Cannot create PID file!")
-    sys.exit(1)
-
-try:
-    r_uid = pwd.getpwnam(r_user).pw_uid
-except:
-    print("Specified user or group doesn't exist!")
-    sys.exit(1)
 
 if log_level == 'critical':
     logging.basicConfig(filename=log_path, level=logging.CRITICAL)
@@ -641,16 +662,10 @@ modules_array = modules_str.split(',')
 for module in modules_array:
         bot_instance.loadModule(module.strip())
 
-# Fork/daemonize process
-newpid = os.fork()
-if newpid == 0:
-    os.setuid(r_uid)
-    web_instance.start()
-    bot_instance.run()
-    sys.exit(0)
+signal.signal(15, catchTerm)
 
-# Write PID
-fl = open(pid_file, 'w')
-fl.write(str(newpid))
-fl.close()
+web_instance.start()
+bot_instance.run()
+while True:
+    time.sleep(1)
 
