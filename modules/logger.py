@@ -38,7 +38,7 @@ class pyCBModule:
             for chan in self.logFiles:
                 if re.match('^#', chan):
                     if self.parentClass.isUserInChan(newNick, chan):
-                        self.logTo(chan, "%s is now known as %s\n" % (oldNick, newNick))
+                        self.logTo(chan, "%s is now known as %s" % (oldNick, newNick))
 
     def handlePart(self, nick, chan):
         self.logTo(chan, "%s has left %s" % (nick, chan))
@@ -47,7 +47,7 @@ class pyCBModule:
         for chan in self.logFiles:
             if re.match('^#', chan):
                 if self.parentClass.isUserInChan(nick, chan):
-                    self.logTo(chan, "%s has quit\n", nick)
+                    self.logTo(chan, "%s has quit", nick)
 
     def handleJoin(self, nick, chan):
         self.logTo(chan, "%s has joined %s" % (nick, chan))
