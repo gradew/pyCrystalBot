@@ -20,7 +20,7 @@ class pyCBModule:
         if logFile in self.logFiles:
             fh = self.logFiles[logFile]
         else:
-            fh = open("%s/%s.log" % (logPath, logFile), 'w')
+            fh = open("%s/%s.log" % (logPath, logFile), 'a')
             self.logFiles[logFile] = fh
         fh.write("%s\n" % logStr)
         fh.flush()
@@ -32,7 +32,7 @@ class pyCBModule:
             fh = self.logFiles[lOldNick]
             fh.close()
             del self.logFiles[lOldNick]
-            fh = open("%s/%s.log" % (logPath, lNewNick), 'w')
+            fh = open("%s/%s.log" % (logPath, lNewNick), 'a')
             self.logFiles[lNewNick] = fh
         else:
             for chan in self.logFiles:
