@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/python2 -u
 
 import socket, time, signal
 import os, sys, re, datetime, ConfigParser, pwd
@@ -268,6 +268,30 @@ class pyCrystalBot:
         elif loglevel == LOGLEVEL_DEBUG:
             logging.debug(logStr)
 
+    def isUserInChan(self, nick, chan):
+        lNick = nick.lower()
+        lChan = chan.lower()
+        if lNick in users:
+            channels = users[lNick]['channels']
+            if chan in channels:
+                return True
+        return False
+
+    def getUserPrefix(self, nick, chan):
+        prefix = ''
+        lNick = nick.lower()
+        lChan = chan.lower()
+        if lNick in users:
+            channels = users[lNick]['channels']
+            if lChan in channels:
+                if (channels[lChan]['owner'] == 1) or (channels[lChan]['admin'] == 1) or (channels[lChan]['op'] == 1):
+                    prefix = '@'
+                elif channels[lChan]['halfop'] == 1:
+                    prefix = '%'
+                elif channels[lChan]['voice'] == 1:
+                    prefix = '+'
+        return prefix
+
     def userDelete(self, nick):
         if nick.lower() in users:
             usersLock.acquire()
@@ -479,7 +503,7 @@ class pyCrystalBot:
                 self.myNick = newNick
                 self.log("My new nick is %s" % self.myNick)
             else:
-                self.log("%s is now known as %s" % (nick, newNick))
+                self.log("%s is now known as %s" % (nick, newNick), LOGLEVEL_DEBUG)
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleNick(nick, newNick)
@@ -490,7 +514,7 @@ class pyCrystalBot:
         if match:
             partedChan = match.group(1)
             self.userRemoveChannel(nick, partedChan)
-            self.log("%s has left %s" % (nick, partedChan))
+            self.log("%s has left %s" % (nick, partedChan), LOGLEVEL_DEBUG)
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handlePart(nick, partedChan)
@@ -500,7 +524,7 @@ class pyCrystalBot:
         match = self.regex_class4_quit.match(remainder)
         if match:
             self.userDelete(nick)
-            self.log("%s has quit" % nick)
+            self.log("%s has quit" % nick, LOGLEVEL_DEBUG)
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleQuit(nick)
@@ -511,7 +535,7 @@ class pyCrystalBot:
         if match:
             joinedChan = match.group(1)
             self.userAddChannel(nick, joinedChan)
-            self.log("%s has joined %s" % (nick, joinedChan))
+            self.log("%s has joined %s" % (nick, joinedChan), LOGLEVEL_DEBUG)
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleJoin(nick, joinedChan)
@@ -525,7 +549,7 @@ class pyCrystalBot:
             if nDest.lower() == self.myNick.lower():
                 self.log("%s sent me a notice: %s" % (nick, nMsg))
             else:
-                self.log("%s sent a notice to %s: %s" % (nick, nDest, nMsg))
+                self.log("%s sent a notice to %s: %s" % (nick, nDest, nMsg), LOGLEVEL_DEBUG)
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleNotice(nick, nDest, nMsg)
@@ -539,7 +563,7 @@ class pyCrystalBot:
             if nDest.lower() == self.myNick.lower():
                 self.log("%s sent me a privmsg: %s" % (nick, nMsg))
             else:
-                self.log("%s sent a privmsg to %s: %s" % (nick, nDest, nMsg))
+                self.log("%s sent a privmsg to %s: %s" % (nick, nDest, nMsg), LOGLEVEL_DEBUG)
             # Send event to modules
             moduleLock.acquire()
             for modKey in moduleHash:
@@ -556,7 +580,7 @@ class pyCrystalBot:
             if kVictim.lower() == self.myNick.lower():
                 self.log("%s has kicked me out of %s: %s" % (nick, kChan, kReason))
             else:
-                self.log("%s has kicked %s out of %s: %s" % (nick, kVictim, kChan, kReason))
+                self.log("%s has kicked %s out of %s: %s" % (nick, kVictim, kChan, kReason), LOGLEVEL_DEBUG)
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleKick(nick, kChan, kVictim, kReason)
@@ -570,7 +594,7 @@ class pyCrystalBot:
             mNicks = None
             if match.group(3):
                 mNicks = match.group(3)
-                self.log("%s sets modes %s to %s on %s" % (nick, mModes, mNicks, mChan))
+                self.log("%s sets modes %s to %s on %s" % (nick, mModes, mNicks, mChan), LOGLEVEL_DEBUG)
                 tabNicks = mNicks.split()
                 nickIdx = 0
                 state = '+'
@@ -595,7 +619,7 @@ class pyCrystalBot:
             kVictim = match.group(1)
             kReason = match.group(2)
             self.userDelete(kVictim)
-            self.log("%s has killed %s: %s" % (nick, kVictim, kReason))
+            self.log("%s has killed %s: %s" % (nick, kVictim, kReason), LOGLEVEL_DEBUG)
             return
 
     def send(self, msg):
