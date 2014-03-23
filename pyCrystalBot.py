@@ -618,7 +618,7 @@ class pyCrystalBot:
                     elif c in 'vhoaq':
                         self.userSetChannelModes(tabNicks[nickIdx], mChan, state + c)
                         nickIdx = nickIdx + 1
-                    elif c == 'b':
+                    elif c in 'beILkjf':
                         nickIdx = nickIdx + 1 # though it's not a nick
             else:
                 self.log("%s sets modes %s on %s" % (nick, mFlags, mChan))
