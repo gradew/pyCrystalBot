@@ -292,6 +292,20 @@ class pyCrystalBot:
                     prefix = '+'
         return prefix
 
+    def getUserIdent(self, nick):
+        userIdent = ''
+        lNick = nick.lower()
+        if lNick in users:
+            userIdent = users[lNick]['ident']
+        return userIdent
+
+    def getUserHost(self, nick):
+        userHost = ''
+        lNick = nick.lower()
+        if lNick in users:
+            userHost = users[lNick]['host']
+        return userHost
+
     def userDelete(self, nick):
         if nick.lower() in users:
             usersLock.acquire()
