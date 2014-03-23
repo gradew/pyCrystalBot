@@ -523,12 +523,12 @@ class pyCrystalBot:
         # QUIT
         match = self.regex_class4_quit.match(remainder)
         if match:
-            self.userDelete(nick)
             self.log("%s has quit" % nick, LOGLEVEL_DEBUG)
             moduleLock.acquire()
             for modKey in moduleHash:
                 moduleHash[modKey].handleQuit(nick)
             moduleLock.release()
+            self.userDelete(nick)
             return
         # JOIN
         match = self.regex_class4_join.match(remainder)
@@ -576,7 +576,6 @@ class pyCrystalBot:
             kChan = match.group(1)
             kVictim = match.group(2)
             kReason = match.group(3)
-            self.userRemoveChannel(kVictim, kChan)
             if kVictim.lower() == self.myNick.lower():
                 self.log("%s has kicked me out of %s: %s" % (nick, kChan, kReason))
             else:
@@ -585,6 +584,7 @@ class pyCrystalBot:
             for modKey in moduleHash:
                 moduleHash[modKey].handleKick(nick, kChan, kVictim, kReason)
             moduleLock.release()
+            self.userRemoveChannel(kVictim, kChan)
             return
         # MODE
         match = self.regex_class4_mode.match(remainder)
