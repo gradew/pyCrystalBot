@@ -8,6 +8,8 @@ import json
 
 import logging
 
+import pika
+
 app = Flask(__name__)
 
 users = {}
@@ -25,6 +27,7 @@ moduleLock = threading.Lock()
 
 web_instance = None
 bot_instance = None
+rabbit_instance = None
 
 sys.path.append(execPath + "/modules/")
 
@@ -257,6 +260,8 @@ class pyCrystalBot:
 
     def log(self, msg, loglevel=LOGLEVEL_INFO):
         logStr="[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg)
+	#if rabbit_instance is not None:
+	#	rabbit_instance.sendMsg(logStr)
         if loglevel == LOGLEVEL_CRITICAL:
             logging.critical(logStr)
         elif loglevel == LOGLEVEL_ERROR:
@@ -652,6 +657,51 @@ class pyCrystalBot:
         for c in self.channels:
             self.send("JOIN %s" % c)
 
+
+
+class pyCrystalRabbit:
+    host = None
+    connection = None
+    channel = None
+    queue_name = None
+    thr1 = None
+
+    def __init__(self, _host):
+        self.host=_host
+
+    def run(self):
+        self.connection=pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
+        self.channel=self.connection.channel()
+        self.channel.exchange_declare(exchange='pycrystalbot', type='fanout')
+        result=self.channel.queue_declare(exclusive=True)
+        self.queue_name=result.method.queue
+        self.channel.queue_bind(exchange='pycrystalbot', queue=self.queue_name)
+        self.thr1 = threading.Thread(target=self.consumeThread)
+        self.thr1.daemon = True
+        self.thr1.setDaemon(True)
+        self.thr1.start()
+
+    def stop(self):
+        self.running = False
+        self.thr1._Thread__stop()
+        self.thr1.join()
+
+    def consumeThread(self):
+        self.channel.basic_consume(self.callback, queue=self.queue_name, no_ack=True)
+        self.channel.start_consuming()
+
+    def callback(self, ch, method, properties, body):
+        tokens=body.split()
+        if len(tokens)>1:
+            args=' '.join(tokens[1:])
+            if tokens[0]=='RAW':
+		args=body[4:]
+                sendToSocket(args)
+
+    def sendMsg(self, body):
+        if self.channel != None:
+            self.channel.basic_publish(exchange='pycrystalbot', routing_key='', body=body)
+
 # Signal handler
 
 def catchTerm(signum, stack):
@@ -660,6 +710,7 @@ def catchTerm(signum, stack):
     web_instance.stop()
     time.sleep(1)
     sys.exit(0)
+
 ##########
 ## MAIN ##
 ##########
@@ -691,6 +742,14 @@ else:
 
 web_host = config.get('web', 'host')
 web_port = config.getint('web', 'port')
+
+# Start connection to RabbitMQ server
+try:
+	rabbit_host = config.get('rabbitmq', 'host')
+	rabbit_instance=pyCrystalRabbit(rabbit_host)
+	rabbit_instance.run()
+except:
+	pass
 
 # Instantiate classes
 web_instance=pyCrystalWebServer(web_host, web_port)
