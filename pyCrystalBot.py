@@ -259,19 +259,19 @@ class pyCrystalBot:
         return True
 
     def log(self, msg, loglevel=LOGLEVEL_INFO):
-        logStr="[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg)
+	logStr="[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg)
 	if rabbit_instance is not None:
 		rabbit_instance.sendMsg(logStr)
-        if loglevel == LOGLEVEL_CRITICAL:
-            logging.critical(logStr)
-        elif loglevel == LOGLEVEL_ERROR:
-            logging.error(logStr)
-        elif loglevel == LOGLEVEL_WARNING:
-            logging.warning(logStr)
-        elif loglevel == LOGLEVEL_INFO:
-            logging.info(logStr)
-        elif loglevel == LOGLEVEL_DEBUG:
-            logging.debug(logStr)
+	if loglevel == LOGLEVEL_CRITICAL:
+		logging.critical(logStr)
+	elif loglevel == LOGLEVEL_ERROR:
+		logging.error(logStr)
+	elif loglevel == LOGLEVEL_WARNING:
+		logging.warning(logStr)
+	elif loglevel == LOGLEVEL_INFO:
+		logging.info(logStr)
+	elif loglevel == LOGLEVEL_DEBUG:
+		logging.debug(logStr)
 
     def isUserInChan(self, nick, chan):
         lNick = nick.lower()
