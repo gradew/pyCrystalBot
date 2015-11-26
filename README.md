@@ -3,7 +3,7 @@ Information
 
 Python version of the official CrystalIRC bot
 
-Created by Julien Derivière (contact@gradew.net)
+Created by Julien Derivière (gradew@crystalirc.net)
 
 pyCrystalBot is a Python IRC client that can be used as a bot on UnrealIRCd IRC servers.
 

@@ -260,8 +260,8 @@ class pyCrystalBot:
 
     def log(self, msg, loglevel=LOGLEVEL_INFO):
         logStr="[%s] %s" % (datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"), msg)
-	#if rabbit_instance is not None:
-	#	rabbit_instance.sendMsg(logStr)
+	if rabbit_instance is not None:
+		rabbit_instance.sendMsg(logStr)
         if loglevel == LOGLEVEL_CRITICAL:
             logging.critical(logStr)
         elif loglevel == LOGLEVEL_ERROR:
@@ -665,17 +665,12 @@ class pyCrystalRabbit:
     channel = None
     queue_name = None
     thr1 = None
+    running = None
 
     def __init__(self, _host):
         self.host=_host
 
     def run(self):
-        self.connection=pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
-        self.channel=self.connection.channel()
-        self.channel.exchange_declare(exchange='pycrystalbot', type='fanout')
-        result=self.channel.queue_declare(exclusive=True)
-        self.queue_name=result.method.queue
-        self.channel.queue_bind(exchange='pycrystalbot', queue=self.queue_name)
         self.thr1 = threading.Thread(target=self.consumeThread)
         self.thr1.daemon = True
         self.thr1.setDaemon(True)
@@ -687,6 +682,14 @@ class pyCrystalRabbit:
         self.thr1.join()
 
     def consumeThread(self):
+        self.running = True
+        self.connection=pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
+        self.channel=self.connection.channel()
+        self.channel.exchange_declare(exchange='pycrystalbot', type='fanout')
+        result=self.channel.queue_declare(exclusive=True)
+        self.queue_name=result.method.queue
+        self.channel.queue_bind(exchange='pycrystalbot', queue=self.queue_name)
+
         self.channel.basic_consume(self.callback, queue=self.queue_name, no_ack=True)
         self.channel.start_consuming()
 
@@ -699,7 +702,7 @@ class pyCrystalRabbit:
                 sendToSocket(args)
 
     def sendMsg(self, body):
-        if self.channel != None:
+        if (self.running == True) and (self.channel != None):
             self.channel.basic_publish(exchange='pycrystalbot', routing_key='', body=body)
 
 # Signal handler
