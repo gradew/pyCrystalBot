@@ -28,6 +28,7 @@ moduleLock = threading.Lock()
 web_instance = None
 bot_instance = None
 rabbit_instance = None
+rabbit_instance_pub = None
 
 sys.path.append(execPath + "/modules/")
 
@@ -657,13 +658,15 @@ class pyCrystalBot:
         for c in self.channels:
             self.send("JOIN %s" % c)
 
-
-
 class pyCrystalRabbit:
     host = None
     connection = None
-    channel = None
-    queue_name = None
+    channel_consumer = None
+    result_consumer = None
+    queue_name_consumer = None
+    channel_publisher = None
+    result_publisher = None
+    queue_name_publisher = None
     thr1 = None
     running = None
 
@@ -684,14 +687,20 @@ class pyCrystalRabbit:
     def consumeThread(self):
         self.running = True
         self.connection=pika.BlockingConnection(pika.ConnectionParameters(host=self.host))
-        self.channel=self.connection.channel()
-        self.channel.exchange_declare(exchange='pycrystalbot', type='fanout')
-        result=self.channel.queue_declare(exclusive=True)
-        self.queue_name=result.method.queue
-        self.channel.queue_bind(exchange='pycrystalbot', queue=self.queue_name)
+	# Consumer channel
+        self.channel_consumer=self.connection.channel()
+        self.channel_consumer.exchange_declare(exchange='pycrystalbot_cmd', type='fanout')
+        self.result_consumer=self.channel_consumer.queue_declare(exclusive=True)
+        self.queue_name_consumer=self.result_consumer.method.queue
+        self.channel_consumer.queue_bind(exchange='pycrystalbot_cmd', queue=self.queue_name_consumer)
+	# Publisher channel
+        self.channel_publisher=self.connection.channel()
+        self.channel_publisher.exchange_declare(exchange='pycrystalbot_logs', type='fanout')
+        self.result_publisher=self.channel_publisher.queue_declare(exclusive=True)
+        self.queue_name_publisher=self.result_publisher.method.queue
 
-        self.channel.basic_consume(self.callback, queue=self.queue_name, no_ack=True)
-        self.channel.start_consuming()
+        self.channel_consumer.basic_consume(self.callback, queue=self.queue_name_consumer, no_ack=True)
+        self.channel_consumer.start_consuming()
 
     def callback(self, ch, method, properties, body):
         tokens=body.split()
@@ -702,8 +711,8 @@ class pyCrystalRabbit:
                 sendToSocket(args)
 
     def sendMsg(self, body):
-        if (self.running == True) and (self.channel != None):
-            self.channel.basic_publish(exchange='pycrystalbot', routing_key='', body=body)
+        if (self.running == True) and (self.channel_consumer != None):
+            self.channel_publisher.basic_publish(exchange='pycrystalbot_logs', routing_key='', body=body)
 
 # Signal handler
 
