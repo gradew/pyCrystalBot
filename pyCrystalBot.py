@@ -672,9 +672,11 @@ class pyCrystalRabbit:
     queue_name_publisher = None
     thr1 = None
     running = None
+    rabbitPublishLock = None
 
     def __init__(self, _host):
         self.host=_host
+	self.rabbitPublishLock=threading.Lock()
 
     def run(self):
         self.thr1 = threading.Thread(target=self.consumeThread)
@@ -715,7 +717,9 @@ class pyCrystalRabbit:
 
     def sendMsg(self, body):
         if (self.running == True) and (self.channel_publisher != None):
+            self.rabbitPublishLock.acquire()
             self.channel_publisher.basic_publish(exchange='pycrystalbot_logs', routing_key='', body=body)
+            self.rabbitPublishLock.release()
 
 # Signal handler
 
