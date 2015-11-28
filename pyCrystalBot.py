@@ -39,9 +39,12 @@ LOGLEVEL_INFO = 3
 LOGLEVEL_DEBUG = 4
 
 def sendToSocket(msg):
-    socketWriteLock.acquire()
-    mySocket.send(msg.encode('utf8')+"\r\n")
-    socketWriteLock.release()
+	socketWriteLock.acquire()
+	try:
+		mySocket.send(msg+"\r\n")
+	except:
+		pass
+	socketWriteLock.release()
 
 class pyCrystalWebServer:
     bind_host = None
@@ -711,7 +714,7 @@ class pyCrystalRabbit:
                 sendToSocket(args)
 
     def sendMsg(self, body):
-        if (self.running == True) and (self.channel_consumer != None):
+        if (self.running == True) and (self.channel_publisher != None):
             self.channel_publisher.basic_publish(exchange='pycrystalbot_logs', routing_key='', body=body)
 
 # Signal handler
